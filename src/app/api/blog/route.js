@@ -5,9 +5,9 @@ import { writeFile } from "fs/promises";
 import fs from "fs";
 import path from "path";
 
-export const dynamic = "force-dynamic"; // Disable route caching
+export const dynamic = "force-dynamic"; // Prevents route caching
 
-await ConnectDB(); // Ensure DB connection
+await ConnectDB(); // connect DB once globally
 
 // 🔤 Slugify utility
 function slugify(text) {
@@ -19,7 +19,7 @@ function slugify(text) {
     .replace(/-+/g, "-");         // collapse multiple -
 }
 
-// ✅ GET: Fetch blogs or a specific blog by slug
+// ✅ GET: Fetch blog(s)
 export async function GET(request) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -39,7 +39,7 @@ export async function GET(request) {
   }
 }
 
-// ✅ POST: Create new blog
+// ✅ POST: Create a new blog
 export async function POST(request) {
   try {
     const formData = await request.formData();
@@ -54,46 +54,71 @@ export async function POST(request) {
       return NextResponse.json({ msg: "Missing required fields" }, { status: 400 });
     }
 
-    // Upload image
+    // Handle image upload
     const bytes = await image.arrayBuffer();
     const buffer = Buffer.from(bytes);
+
+    // Create images directory if it doesn't exist
+    const uploadDir = path.join(process.cwd(), "public", "images", "blogs");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Create unique filename
     const timestamp = Date.now();
-    const filename = `${timestamp}_${image.name}`;
-    const imagePath = path.join(process.cwd(), "public", filename);
+    const filename = `${timestamp}_${image.name.replace(/\s+/g, '_')}`;
+    const imagePath = path.join(uploadDir, filename);
+
+    // Save image
     await writeFile(imagePath, buffer);
 
-    // Create blog
+    // Generate slug from title
     const slug = slugify(title);
+
+    // Ensure slug uniqueness
+    let uniqueSlug = slug;
+    let counter = 1;
+    while (await BlogModel.findOne({ slug: uniqueSlug })) {
+      uniqueSlug = `${slug}-${counter}`;
+      counter++;
+    }
+
+    // Create new blog with relative image path
     const newBlog = new BlogModel({
       title,
       description,
       category,
       author,
       authorImg,
-      image: `/${filename}`,
-      slug,
+      image: `/images/blogs/${filename}`,
+      slug: uniqueSlug
     });
 
     await newBlog.save();
-    return NextResponse.json({ success: true, msg: "Blog Created Successfully" });
+    return NextResponse.json({ 
+      success: true, 
+      msg: "Blog Created Successfully",
+      blog: newBlog
+    });
   } catch (error) {
     console.error("POST Error:", error);
-    return NextResponse.json({ success: false, msg: "Error creating blog" }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      msg: error.message || "Error creating blog" 
+    }, { status: 500 });
   }
 }
 
-// ✅ DELETE: Delete blog by ID
+// ✅ DELETE: Remove a blog
 export async function DELETE(request) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const id = searchParams.get("id");
-
+    const id = request.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ msg: "Missing blog ID" }, { status: 400 });
 
     const blog = await BlogModel.findById(id);
     if (!blog) return NextResponse.json({ msg: "Blog not found" }, { status: 404 });
 
-    // Delete associated image
+    // 🗑 Remove image if custom
     if (blog.image && blog.image !== "/default-image.jpg") {
       const imagePath = path.join(process.cwd(), "public", blog.image);
       fs.unlink(imagePath, (err) => {
@@ -102,10 +127,9 @@ export async function DELETE(request) {
     }
 
     await BlogModel.findByIdAndDelete(id);
-
-    return NextResponse.json({ success: true, msg: "Blog Deleted Successfully" });
-  } catch (error) {
-    console.error("DELETE Error:", error);
+    return NextResponse.json({ msg: "Blog Deleted" });
+  } catch (err) {
+    console.error("DELETE Error:", err);
     return NextResponse.json({ msg: "Failed to delete blog" }, { status: 500 });
   }
 }

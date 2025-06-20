@@ -16,14 +16,14 @@ const BlogItem = ({
   const safeImage =
     typeof image === "string"
       ? image
-      : image?.src
+      : typeof image === "object" && image?.src
       ? image.src
       : "/default-image.jpg";
 
   const safeAuthorImg =
     typeof authorImg === "string"
       ? authorImg
-      : authorImg?.src
+      : typeof authorImg === "object" && authorImg?.src
       ? authorImg.src
       : "/default-avatar.png";
 
@@ -31,7 +31,7 @@ const BlogItem = ({
 
   return (
     <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 max-w-sm w-full flex flex-col overflow-hidden">
-      <Link href={blogLink} className="block">
+      <Link href={`/blogs/${slug}`} className="block">
         <Image
           src={safeImage}
           alt={title}
@@ -60,9 +60,11 @@ const BlogItem = ({
             />
             <span className="text-gray-800 font-medium">{author}</span>
           </div>
-          <span className="bg-blue-100 text-blue-600 px-2.5 py-0.5 rounded-full font-semibold text-xs">
-            {category}
-          </span>
+          <div className="flex items-center gap-2 text-gray-500">
+            <span className="bg-blue-100 text-blue-600 px-2.5 py-0.5 rounded-full font-semibold text-xs">
+              {category}
+            </span>
+          </div>
         </div>
       </div>
     </div>
