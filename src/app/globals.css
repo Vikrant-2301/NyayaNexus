@@ -70,3 +70,17 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Add these to your existing styles */
+.ProseMirror {
+  min-height: 200px;
+  padding: 1rem;
+}
+
+.ProseMirror:focus {
+  outline: none;
+}
+
+.ProseMirror > * + * {
+  margin-top: 0.75em;
+}

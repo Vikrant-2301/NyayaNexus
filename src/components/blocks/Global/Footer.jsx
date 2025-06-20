@@ -18,7 +18,7 @@ export function Footer({
     },
     {
       icon: <Instagram className="h-5 w-5" />,
-      href: "https://instagram.com",
+      href: "https://www.instagram.com/nyaya_nexus/",
       label: "Instagram",
     },
   ],

@@ -1,13 +1,8 @@
 import About from "@/components/blocks/Home/about";
-import Activities from "@/components/blocks/Home/activities";
-
 import Banner from "@/components/blocks/Home/Banner";
-import Collab from "@/components/blocks/Home/collab";
+import BlogList from "@/components/blocks/Home/bloglist";
 import { Contact } from "@/components/blocks/Home/contact";
 import { FeaturesSectionWithHoverEffects } from "@/components/blocks/Home/features";
-import Speakers from "@/components/blocks/Home/speakers";
-
-import Venue from "@/components/blocks/Home/venue";
 
 function HomePage() {
   return (
@@ -17,6 +12,7 @@ function HomePage() {
         <Banner />
         <About />
         <FeaturesSectionWithHoverEffects />
+        <BlogList />
         {/* <Activities /> */}
         {/* <Speakers /> */}
         {/* <Venue /> */}

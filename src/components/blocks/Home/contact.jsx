@@ -9,8 +9,8 @@ import { Fade } from "react-awesome-reveal";
 export const Contact = ({
   title = "Contact Us",
   description = "We are available for questions, feedback, or collaboration opportunities. Let us know how we can help!",
-  phone = "(123) 34567890",
-  email = "nyayanexus@example.com",
+  phone = "+917982784180",
+  email = "nyaya.nexus@gmail.com",
   web = { label: "Nyaya-nexus.com", url: "https://nyaya-nexus.com" },
 }) => {
   return (
