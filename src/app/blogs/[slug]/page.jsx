@@ -4,133 +4,233 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Image from "next/image";
+import Link from "next/link";
+import { Twitter, Facebook, ArrowUp } from "lucide-react";
+import { IconBrandWhatsapp } from "@tabler/icons-react";
+import { motion } from "framer-motion";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+
+const estimateReadTime = (text) => {
+  if (typeof text !== "string") return 0;
+  const words = text.trim().split(/\s+/).length;
+  return Math.ceil(words / 200);
+};
+
+const ScrollToTopButton = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  useEffect(() => {
+    const toggleVisibility = () => {
+      setIsVisible(window.scrollY > 200);
+    };
+    window.addEventListener("scroll", toggleVisibility);
+    return () => window.removeEventListener("scroll", toggleVisibility);
+  }, []);
+  return isVisible ? (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      className="fixed bottom-5 right-5 z-50 p-3 bg-indigo-600 text-white rounded-full shadow-md hover:bg-indigo-700 transition"
+    >
+      <ArrowUp size={18} />
+    </button>
+  ) : null;
+};
 
 const BlogPage = () => {
   const { slug } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [views, setViews] = useState(0);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState({ name: "", content: "" });
+  const [commentStatus, setCommentStatus] = useState("");
+  const [popularBlogs, setPopularBlogs] = useState([]);
+  const [nextPrevBlogs, setNextPrevBlogs] = useState({
+    next: null,
+    prev: null,
+  });
+
+  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
 
   useEffect(() => {
-    if (!slug) return;
-
-    const fetchBlogData = async () => {
+    const fetchBlog = async () => {
       try {
-        const response = await axios.get(
-          `/api/blog?slug=${encodeURIComponent(slug)}`
-        );
-        setData(response.data);
+        const res = await axios.get(`/api/blog/${slug}`);
+        const blog = res.data;
+        setData(blog);
+        setComments(blog.comments?.filter((c) => c.approved) || []);
+        setLoading(false);
+
+        if (blog._id) {
+          axios
+            .post("/api/view", { id: blog._id })
+            .then((res) => setViews(res.data.views));
+          axios
+            .get("/api/blog/popular")
+            .then((res) => setPopularBlogs(res.data.blogs || []));
+          axios
+            .get(`/api/blog/adjacent?slug=${slug}`)
+            .then((res) => setNextPrevBlogs(res.data));
+        }
       } catch (error) {
-        console.error(
-          "Failed to fetch blog data:",
-          error.response?.data || error.message
-        );
-      } finally {
+        console.error("Error loading blog:", error);
         setLoading(false);
       }
     };
 
-    fetchBlogData();
+    fetchBlog();
   }, [slug]);
 
-  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  const readTime = estimateReadTime(data?.description || "");
 
-  const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: data?.title || "Blog Post",
-          url: shareUrl,
-        });
-      } catch (err) {
-        console.error("Share failed:", err);
-      }
-    } else {
-      alert("Sharing not supported on this browser.");
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    setCommentStatus("");
+    if (!data?._id || !newComment.name.trim() || !newComment.content.trim()) {
+      setCommentStatus("Please fill in all fields.");
+      return;
+    }
+
+    try {
+      await axios.post(`/api/comments`, {
+        id: data._id,
+        name: newComment.name.trim(),
+        content: newComment.content.trim(),
+      });
+      setCommentStatus("Comment submitted for approval.");
+      setNewComment({ name: "", content: "" });
+    } catch (error) {
+      console.error("Comment error:", error);
+      setCommentStatus("Failed to submit comment.");
     }
   };
 
-  if (loading) return <div className="p-10 text-center">Loading blog...</div>;
-  if (!data)
-    return <div className="p-10 text-center text-red-500">Blog not found.</div>;
+  const handleShare = (platform) => {
+    const text = encodeURIComponent(`Check out this blog: ${data?.title}`);
+    const urls = {
+      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${shareUrl}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`,
+      whatsapp: `https://wa.me/?text=${text} ${shareUrl}`,
+    };
+    window.open(urls[platform], "_blank");
+  };
 
   return (
-    <main className="pt-28 pb-20 px-4 sm:px-6 lg:px-32 xl:px-48 bg-white text-gray-900">
-      {/* Title Section */}
-      <section className="text-center max-w-5xl mx-auto">
-        <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight mb-6">
-          {data.title}
-        </h1>
-        <div className="flex items-center justify-center gap-3 mb-10">
-          <Image
-            src={data.authorImg || "/default-avatar.png"}
-            width={50}
-            height={50}
-            alt="Author"
-            className="rounded-full border"
-          />
-          <p className="text-gray-600 text-base sm:text-lg">
-            {data.author || "Anonymous"}
-          </p>
+    <>
+      <div className="max-w-screen-xl mx-auto px-4 md:px-6 pt-24 pb-10 grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10">
+        {/* Main Blog Content */}
+        <div>
+          <div className="relative w-full h-[50vh] sm:h-[60vh] rounded-xl overflow-hidden">
+            {loading ? (
+              <Skeleton height="100%" />
+            ) : (
+              <Image
+                src={data?.image || "/default-image.jpg"}
+                alt={data?.title}
+                fill
+                className="object-cover object-center"
+                priority
+              />
+            )}
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-4 text-sm text-gray-600">
+            {loading ? (
+              <Skeleton width={150} />
+            ) : (
+              <>
+                <span className="capitalize">{data?.category}</span>
+                <span>•</span>
+                <span>{readTime} min read</span>
+                <span>•</span>
+                <span>{views} views</span>
+              </>
+            )}
+          </div>
+
+          <h1 className="text-4xl font-bold mt-4 text-gray-900 leading-tight">
+            {loading ? <Skeleton count={2} /> : data?.title}
+          </h1>
+
+          {loading ? (
+            <div className="flex gap-3 mt-4">
+              <Skeleton circle width={40} height={40} />
+              <Skeleton width={100} />
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 mt-4">
+              <Image
+                src={data?.author?.image || "/default-avatar.png"}
+                alt={data?.author?.name}
+                width={40}
+                height={40}
+                className="rounded-full"
+              />
+              <span>{data?.author?.name}</span>
+            </div>
+          )}
+
+          {/* Main Content */}
+          {loading ? (
+            <div className="mt-8 space-y-4">
+              <Skeleton count={10} />
+            </div>
+          ) : (
+            <article
+              className="prose prose-lg lg:prose-xl max-w-none mt-8"
+              dangerouslySetInnerHTML={{ __html: data?.description }}
+            />
+          )}
         </div>
-      </section>
 
-      {/* Featured Image */}
-      <section className="w-full max-w-5xl mx-auto aspect-video overflow-hidden rounded-2xl shadow-lg border mb-14">
-        <Image
-          src={data.image || "/default-image.jpg"}
-          alt="Blog cover"
-          width={1280}
-          height={720}
-          className="w-full h-full object-cover"
-        />
-      </section>
+        {/* Sidebar Popular Posts */}
+        <aside className="hidden lg:block sticky top-28 h-fit">
+          <div className="bg-white rounded-lg shadow p-5">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">
+              Popular Posts
+            </h3>
+            <div className="space-y-5">
+              {loading
+                ? Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={idx} className="flex gap-3">
+                      <Skeleton width={80} height={60} />
+                      <div className="flex-1">
+                        <Skeleton width="80%" />
+                        <Skeleton width="40%" />
+                      </div>
+                    </div>
+                  ))
+                : popularBlogs.map((blog) => (
+                    <Link
+                      key={blog._id}
+                      href={`/blogs/${blog.slug}`}
+                      className="flex gap-3 hover:bg-gray-100 rounded p-2 transition"
+                    >
+                      <Image
+                        src={blog.image}
+                        alt={blog.title}
+                        width={80}
+                        height={60}
+                        className="rounded object-cover"
+                        loading="lazy"
+                      />
+                      <div>
+                        <h4 className="font-medium text-gray-900 line-clamp-2">
+                          {blog.title}
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          {blog.views} views
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+            </div>
+          </div>
+        </aside>
+      </div>
 
-      {/* Blog Content */}
-      <article className="prose prose-lg prose-slate max-w-3xl mx-auto text-justify">
-        <div dangerouslySetInnerHTML={{ __html: data.description }} />
-      </article>
-
-      {/* Share Section */}
-      <section className="mt-20 max-w-3xl mx-auto border-t pt-10">
-        <h3 className="text-xl font-semibold mb-4">Share this article</h3>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={handleNativeShare}
-            className="px-4 py-2 rounded border text-sm font-medium hover:bg-black hover:text-white transition"
-          >
-            Share via Device
-          </button>
-          <a
-            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-              shareUrl
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 rounded border text-sm font-medium hover:bg-blue-600 hover:text-white transition"
-          >
-            Facebook
-          </a>
-          <a
-            href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
-              shareUrl
-            )}&text=${encodeURIComponent(data.title)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 rounded border text-sm font-medium hover:bg-blue-400 hover:text-white transition"
-          >
-            Twitter
-          </a>
-          <a
-            href={`mailto:?subject=${encodeURIComponent(
-              data.title
-            )}&body=${encodeURIComponent(shareUrl)}`}
-            className="px-4 py-2 rounded border text-sm font-medium hover:bg-gray-700 hover:text-white transition"
-          >
-            Email
-          </a>
-        </div>
-      </section>
-    </main>
+      <ScrollToTopButton />
+    </>
   );
 };
 

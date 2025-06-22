@@ -1,34 +1,51 @@
 import mongoose from "mongoose";
 
 const Schema = new mongoose.Schema({
-    title:{
-        type:String,
-        required:true
+    title: {
+        type: String,
+        required: true
     },
-    description:{
-        type:String,
-        required:true
+    description: {
+        type: String,
+        required: true
     },
-    category:{
-        type:String,
-        required:true
+    category: {
+        type: String,
+        required: true
     },
-    author:{
-        type:String,
-        required:true
+    author: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Author',
+        required: true
     },
-    image:{
-        type:String,
-        required:true
-    },
-    authorImg:{
-        type:String,
-        required:true
+    image: {
+        type: String,
+        required: true
     },
     slug: {
         type: String,
         required: true,
         unique: true
+    },
+    views: {
+        type: Number,
+        default: 0
+    },
+    comments: [{
+        name: String,
+        content: String,
+        approved: {
+            type: Boolean,
+            default: false
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
 });
 

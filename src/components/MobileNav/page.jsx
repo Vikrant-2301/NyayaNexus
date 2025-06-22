@@ -8,6 +8,8 @@ const navItems = [
   { title: "Home", href: "/" },
   { title: "About", href: "/#about" },
   { title: "Features", href: "/#features" },
+  { title: "Articles", href: "/#articles" },
+  { title: "Submit Article", href: "/#submit-article" },
   { title: "Contact", href: "/#contact" },
 ];
 
@@ -32,7 +34,7 @@ function MobileNav() {
       </SheetTrigger>
       <SheetContent>
         <div className="flex flex-col h-full">
-          {/* Scrollable Navigation Section */}
+          {/* Navigation Items */}
           <div className="flex flex-col my-auto justify-center items-center w-full px-4 space-y-4 overflow-y-auto">
             {navItems.map((item, index) => (
               <div key={index} className="w-full">
@@ -53,6 +55,7 @@ function MobileNav() {
                     item.title
                   )}
                 </div>
+
                 {/* Sub-navigation items */}
                 {item.subItems && openSubMenuIndex === index && (
                   <div className="pl-6 space-y-2 transition-all duration-300 ease-in-out">

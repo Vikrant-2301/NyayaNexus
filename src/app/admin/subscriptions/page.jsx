@@ -1,76 +1,111 @@
 "use client";
-import SubsTableItem from "@/components/AdminComponents/SubsTableItem";
+
+import {
+  FaBlog,
+  FaCommentDots,
+  FaEnvelope,
+  FaUser,
+  FaNewspaper,
+} from "react-icons/fa";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import axios from "axios";
-import React, { useEffect, useState } from "react";
-import { toast } from "react-toastify";
 
-const Page = () => {
-  const [emails, setEmails] = useState([]);
-
-  const fetchEmails = async () => {
-    try {
-      const response = await axios.get("/api/email");
-      setEmails(response.data.emails);
-    } catch (error) {
-      toast.error("Failed to fetch emails");
-    }
-  };
-
-  const deleteEmail = async (mongoId) => {
-    try {
-      const response = await axios.delete("/api/email", {
-        params: {
-          id: mongoId,
-        },
-      });
-      if (response.data.success) {
-        toast.success(response.data.msg);
-        fetchEmails();
-      } else {
-        toast.error("Error");
-      }
-    } catch (error) {
-      toast.error("Failed to delete email");
-    }
-  };
+const AdminDashboardPage = () => {
+  const [stats, setStats] = useState({
+    blogs: 0,
+    comments: 0,
+    submissions: 0,
+    authors: 0,
+    subscribers: 0,
+  });
 
   useEffect(() => {
-    fetchEmails();
+    const fetchStats = async () => {
+      try {
+        const [blogRes, commentRes, subRes, authorRes, emailRes] =
+          await Promise.all([
+            axios.get("/api/blog"),
+            axios.get("/api/admin/comments"),
+            axios.get("/api/admin/article-submissions"),
+            axios.get("/api/authors"),
+            axios.get("/api/email"),
+          ]);
+
+        setStats({
+          blogs: blogRes.data.blogs.length,
+          comments: commentRes.data.comments.length,
+          submissions: subRes.data.submissions.length,
+          authors: authorRes.data.length,
+          subscribers: emailRes.data.emails.length,
+        });
+      } catch (err) {
+        console.error("Failed to fetch dashboard stats", err);
+      }
+    };
+
+    fetchStats();
   }, []);
 
+  const tiles = [
+    {
+      title: "Add Blog",
+      href: "/admin/addBlog",
+      icon: <FaBlog className="text-2xl text-blue-600" />,
+    },
+    {
+      title: "Blog List",
+      href: "/admin/blogList",
+      icon: <FaBlog className="text-2xl text-purple-600" />,
+      count: stats.blogs,
+    },
+    {
+      title: "Comments",
+      href: "/admin/comments",
+      icon: <FaCommentDots className="text-2xl text-green-600" />,
+      count: stats.comments,
+    },
+    {
+      title: "Subscriptions",
+      href: "/admin/subscriptions",
+      icon: <FaEnvelope className="text-2xl text-pink-600" />,
+      count: stats.subscribers,
+    },
+    {
+      title: "Authors",
+      href: "/admin/authors",
+      icon: <FaUser className="text-2xl text-yellow-600" />,
+      count: stats.authors,
+    },
+    {
+      title: "Article Submissions",
+      href: "/admin/article-submissions",
+      icon: <FaNewspaper className="text-2xl text-red-600" />,
+      count: stats.submissions,
+    },
+  ];
+
   return (
-    <div className="flex-1 pt-5 px-5 sm:pt-12 sm:pl-16">
-      <h1>All Subscription</h1>
-      <div className="relative max-w-[600px] h-[80vh] overflow-x-auto mt-4 border border-gray-400 scrollbar-hide">
-        <table className="w-full text-sm text-gray-500">
-          <thead className="text-xs text-left text-gray-700 uppercase bg-gray-50 ">
-            <tr>
-              <th scope="col" className="px-6 py-3">
-                Email Subscription
-              </th>
-              <th scope="col" className="hidden sm:block px-6 py-3">
-                Date
-              </th>
-              <th scope="col" className="px-6 py-3">
-                Action
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {emails.map((item, index) => (
-              <SubsTableItem
-                key={index}
-                mongoId={item._id}
-                deleteEmail={deleteEmail}
-                email={item.email}
-                date={item.date}
-              />
-            ))}
-          </tbody>
-        </table>
+    <div className="p-6 min-h-screen">
+      <h1 className="text-3xl sm:text-4xl font-bold mb-8 text-center sm:text-left">
+        Admin Dashboard
+      </h1>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {tiles.map(({ title, href, icon, count }) => (
+          <Link key={title} href={href}>
+            <div className="bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:bg-gray-50 transition flex flex-col gap-2 items-center justify-center text-center">
+              {icon}
+              <p className="text-md font-semibold text-gray-700">{title}</p>
+              {typeof count === "number" && (
+                <span className="text-sm text-gray-500">{count} items</span>
+              )}
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );
 };
 
-export default Page;
+export default AdminDashboardPage;

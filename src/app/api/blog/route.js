@@ -1,13 +1,14 @@
 import { ConnectDB } from "@/components/lib/config/db";
 import BlogModel from "@/components/lib/models/BlogModel";
+import AuthorModel from "@/components/lib/models/AuthorModel"; // ✅ Register Author model
 import { NextResponse } from "next/server";
 import { writeFile } from "fs/promises";
 import fs from "fs";
 import path from "path";
 
-export const dynamic = "force-dynamic"; // Prevents route caching
+export const dynamic = "force-dynamic";
 
-await ConnectDB(); // connect DB once globally
+await ConnectDB();
 
 // 🔤 Slugify utility
 function slugify(text) {
@@ -19,23 +20,24 @@ function slugify(text) {
     .replace(/-+/g, "-");         // collapse multiple -
 }
 
-// ✅ GET: Fetch blog(s)
+// ✅ GET: Fetch blogs with author details
 export async function GET(request) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const blogSlug = searchParams.get("slug");
+    const blogs = await BlogModel.find({})
+      .populate("author") // populate author data
+      .sort({ createdAt: -1 });
 
-    if (blogSlug) {
-      const blog = await BlogModel.findOne({ slug: blogSlug });
-      if (!blog) return NextResponse.json({ msg: "Blog not found" }, { status: 404 });
-      return NextResponse.json(blog);
+    if (!blogs || blogs.length === 0) {
+      return NextResponse.json({ blogs: [], msg: "No blogs found" });
     }
 
-    const blogs = await BlogModel.find({}).sort({ createdAt: -1 });
     return NextResponse.json({ blogs });
   } catch (error) {
     console.error("GET Error:", error);
-    return NextResponse.json({ msg: "Failed to fetch blogs" }, { status: 500 });
+    return NextResponse.json({
+      msg: "Failed to fetch blogs",
+      error: error.message,
+    }, { status: 500 });
   }
 }
 
@@ -47,64 +49,58 @@ export async function POST(request) {
     const description = formData.get("description");
     const category = formData.get("category");
     const author = formData.get("author");
-    const authorImg = formData.get("authorImg");
     const image = formData.get("image");
 
-    if (!image || !title || !description || !category || !author || !authorImg) {
+    if (!image || !title || !description || !category || !author) {
       return NextResponse.json({ msg: "Missing required fields" }, { status: 400 });
     }
 
-    // Handle image upload
+    // Save image
     const bytes = await image.arrayBuffer();
     const buffer = Buffer.from(bytes);
-
-    // Create images directory if it doesn't exist
     const uploadDir = path.join(process.cwd(), "public", "images", "blogs");
+
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // Create unique filename
     const timestamp = Date.now();
-    const filename = `${timestamp}_${image.name.replace(/\s+/g, '_')}`;
+    const filename = `${timestamp}_${image.name.replace(/\s+/g, "_")}`;
     const imagePath = path.join(uploadDir, filename);
-
-    // Save image
     await writeFile(imagePath, buffer);
 
-    // Generate slug from title
-    const slug = slugify(title);
-
-    // Ensure slug uniqueness
-    let uniqueSlug = slug;
+    // Generate unique slug
+    const baseSlug = slugify(title);
+    let uniqueSlug = baseSlug;
     let counter = 1;
     while (await BlogModel.findOne({ slug: uniqueSlug })) {
-      uniqueSlug = `${slug}-${counter}`;
-      counter++;
+      uniqueSlug = `${baseSlug}-${counter++}`;
     }
 
-    // Create new blog with relative image path
     const newBlog = new BlogModel({
       title,
       description,
       category,
       author,
-      authorImg,
       image: `/images/blogs/${filename}`,
-      slug: uniqueSlug
+      slug: uniqueSlug,
     });
 
     await newBlog.save();
-    return NextResponse.json({ 
-      success: true, 
+
+    // Populate the author for immediate client-side use
+    await newBlog.populate("author");
+
+    return NextResponse.json({
+      success: true,
       msg: "Blog Created Successfully",
-      blog: newBlog
+      blog: newBlog,
     });
   } catch (error) {
     console.error("POST Error:", error);
-    return NextResponse.json({ 
-      success: false, 
-      msg: error.message || "Error creating blog" 
+    return NextResponse.json({
+      success: false,
+      msg: error.message || "Error creating blog",
     }, { status: 500 });
   }
 }
@@ -118,7 +114,6 @@ export async function DELETE(request) {
     const blog = await BlogModel.findById(id);
     if (!blog) return NextResponse.json({ msg: "Blog not found" }, { status: 404 });
 
-    // 🗑 Remove image if custom
     if (blog.image && blog.image !== "/default-image.jpg") {
       const imagePath = path.join(process.cwd(), "public", blog.image);
       fs.unlink(imagePath, (err) => {

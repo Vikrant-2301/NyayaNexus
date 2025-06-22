@@ -39,6 +39,20 @@ export function NavigationItems() {
           </Link>
         </NavigationMenuItem>
         <NavigationMenuItem>
+          <Link href="/#articles" passHref legacyBehavior>
+            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              Articles
+            </NavigationMenuLink>
+          </Link>
+        </NavigationMenuItem>
+        <NavigationMenuItem>
+          <Link href="/##submit-article" passHref legacyBehavior>
+            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              Submit Article
+            </NavigationMenuLink>
+          </Link>
+        </NavigationMenuItem>
+        <NavigationMenuItem>
           <Link href="/#contact" passHref legacyBehavior>
             <NavigationMenuLink className={navigationMenuTriggerStyle()}>
               Contact

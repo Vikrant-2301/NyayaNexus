@@ -2,7 +2,7 @@
 import { assets } from "../../../../public/assets/assets";
 import axios from "axios";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -58,13 +58,25 @@ const MenuBar = ({ editor }) => {
 
 const Page = () => {
   const [image, setImage] = useState(null);
-  const [authors, setAuthors] = useState([
-    { name: "Alex Bennett", img: "/author_img.png" },
-    { name: "Custom Author", img: "" },
-  ]);
-  const [selectedAuthor, setSelectedAuthor] = useState(authors[0]);
-  const [customAuthor, setCustomAuthor] = useState({ name: "", img: "" });
+  const [authors, setAuthors] = useState([]);
+  const [selectedAuthor, setSelectedAuthor] = useState(null);
   const [data, setData] = useState({ title: "", category: "Startup" });
+
+  useEffect(() => {
+    const fetchAuthors = async () => {
+      try {
+        const response = await axios.get("/api/authors");
+        setAuthors(response.data);
+        if (response.data.length > 0) {
+          setSelectedAuthor(response.data[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching authors:", error);
+        toast.error("Failed to fetch authors");
+      }
+    };
+    fetchAuthors();
+  }, []);
 
   const editor = useEditor({
     extensions: [StarterKit, Link, TiptapImage],
@@ -78,6 +90,11 @@ const Page = () => {
   const onSubmitHandler = async (e) => {
     e.preventDefault();
 
+    if (!selectedAuthor) {
+      toast.error("Please select an author.");
+      return;
+    }
+
     if (!image) {
       toast.error("Please select a thumbnail image.");
       return;
@@ -87,33 +104,28 @@ const Page = () => {
     formData.append("title", data.title);
     formData.append("description", editor.getHTML());
     formData.append("category", data.category);
-    formData.append(
-      "author",
-      selectedAuthor.name === "Custom Author"
-        ? customAuthor.name
-        : selectedAuthor.name
-    );
-    formData.append(
-      "authorImg",
-      selectedAuthor.name === "Custom Author"
-        ? customAuthor.img
-        : selectedAuthor.img
-    );
+    formData.append("author", selectedAuthor._id);
+    formData.append("authorImg", selectedAuthor.image); // Add author's image
     formData.append("image", image);
 
     try {
-      const res = await axios.post("/api/blog", formData);
+      const res = await axios.post("/api/blog", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
       if (res.data.success) {
         toast.success("Blog posted successfully!");
         editor.commands.setContent("");
         setData({ title: "", category: "Startup" });
         setImage(null);
         setSelectedAuthor(authors[0]);
-        setCustomAuthor({ name: "", img: "" });
       } else {
         toast.error(res.data.msg || "Failed to post blog.");
       }
     } catch (err) {
+      console.error("Error submitting blog:", err);
       toast.error(err.response?.data?.msg || "Submission failed.");
     }
   };
@@ -134,13 +146,25 @@ const Page = () => {
               className="block w-full cursor-pointer border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-indigo-500 transition"
             >
               <div className="flex justify-center">
-                <Image
-                  src={image ? URL.createObjectURL(image) : assets.upload_area}
-                  alt="Thumbnail"
-                  width={200}
-                  height={100}
-                  className="object-cover"
-                />
+                {image ? (
+                  <Image
+                    src={URL.createObjectURL(image)}
+                    alt="Thumbnail"
+                    width={200}
+                    height={100}
+                    className="object-cover"
+                  />
+                ) : assets.upload_area ? (
+                  <Image
+                    src={assets.upload_area}
+                    alt="Upload placeholder"
+                    width={200}
+                    height={100}
+                    className="object-cover"
+                  />
+                ) : (
+                  <p className="text-gray-400">No image selected</p>
+                )}
               </div>
             </label>
             <input
@@ -205,58 +229,24 @@ const Page = () => {
               Author
             </label>
             <select
-              value={selectedAuthor.name}
+              value={selectedAuthor?._id || ""}
               onChange={(e) => {
-                const a = authors.find(
-                  (author) => author.name === e.target.value
-                );
-                setSelectedAuthor(a);
+                const author = authors.find((a) => a._id === e.target.value);
+                setSelectedAuthor(author || null);
               }}
               className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              required
             >
+              <option value="">Select an author</option>
               {authors.map((author) => (
-                <option key={author.name} value={author.name}>
+                <option key={author._id} value={author._id}>
                   {author.name}
                 </option>
               ))}
             </select>
-
-            {selectedAuthor.name === "Custom Author" && (
-              <div className="mt-4 space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Custom Author Name
-                  </label>
-                  <input
-                    type="text"
-                    value={customAuthor.name}
-                    onChange={(e) =>
-                      setCustomAuthor({ ...customAuthor, name: e.target.value })
-                    }
-                    className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    placeholder="Enter name"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Custom Author Image URL
-                  </label>
-                  <input
-                    type="text"
-                    value={customAuthor.img}
-                    onChange={(e) =>
-                      setCustomAuthor({ ...customAuthor, img: e.target.value })
-                    }
-                    className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    placeholder="Enter image URL"
-                    required
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
+          {/* Submit Button */}
           <div className="pt-4">
             <button
               type="submit"

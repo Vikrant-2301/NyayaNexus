@@ -1,3 +1,4 @@
+//src\components\AdminComponents\BlogTableItem.jsx
 import { assets } from "../../../public/assets/assets";
 import Image from "next/image";
 import React from "react";
@@ -22,8 +23,8 @@ const BlogTableItem = ({
             className="rounded-full object-cover border border-gray-300"
             width={40}
             height={40}
-            src={authorImg || assets.profile_icon}
-            alt={author || "Author"}
+            src={authorImg || "/default-image.jpg"} // Add a default image fallback
+            alt={title || "Blog image"}
           />
           <span className="text-sm font-medium text-gray-800">
             {author || "Unknown Author"}

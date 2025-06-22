@@ -60,9 +60,9 @@ const Page = () => {
                 key={index}
                 mongoId={item._id}
                 title={item.title}
-                author={item.author}
-                authorImg={item.authorImg}
-                date={item.date}
+                author={item.author?.name || "Unknown Author"}
+                authorImg={item.author?.image || "/default-avatar.png"}
+                date={item.createdAt} // Also fixed the date property
                 deleteBlog={deleteBlog}
               />
             ))}
