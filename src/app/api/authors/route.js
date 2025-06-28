@@ -1,8 +1,20 @@
+//src\app\api\authors\route.js
 import { NextResponse } from "next/server";
 import { writeFile } from "fs/promises";
 import path from "path";
 import { ConnectDB } from "@/components/lib/config/db";
 import Author from "@/components/lib/models/AuthorModel";
+
+export async function GET() {
+  try {
+    await ConnectDB();
+    const authors = await Author.find();
+    return NextResponse.json(authors, { status: 200 });
+  } catch (error) {
+    console.error("GET /api/authors error:", error);
+    return NextResponse.json({ error: "Failed to fetch authors" }, { status: 500 });
+  }
+}
 
 export async function POST(request) {
   try {

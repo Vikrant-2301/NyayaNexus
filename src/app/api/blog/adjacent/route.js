@@ -1,3 +1,4 @@
+//src\app\api\blog\adjacent\route.js
 import { NextResponse } from "next/server";
 import BlogModel from "@/components/lib/models/BlogModel";
 import { ConnectDB } from "@/components/lib/config/db";

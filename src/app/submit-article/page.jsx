@@ -33,22 +33,47 @@ const SubmitArticle = () => {
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        bulletList: {
+          HTMLAttributes: { class: "list-disc pl-6" },
+        },
+        orderedList: {
+          HTMLAttributes: { class: "list-decimal pl-6" },
+        },
+      }),
       Underline,
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { class: "text-blue-600 italic underline" },
+        HTMLAttributes: { class: "text-blue-600 underline italic" },
       }),
     ],
-    content: "",
     editorProps: {
       attributes: {
-        class: "min-h-[250px] p-3 focus:outline-none",
+        class:
+          "min-h-[250px] p-3 focus:outline-none prose prose-sm sm:prose lg:prose-lg",
+      },
+      handlePaste(view, event) {
+        const html = event.clipboardData?.getData("text/html");
+        if (html) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, "text/html");
+          const content = doc.body.innerHTML;
+          editor?.commands.insertContent(content);
+          event.preventDefault();
+          return true;
+        }
+        return false;
       },
     },
     onUpdate: ({ editor }) => {
       setForm((prev) => ({ ...prev, content: editor.getHTML() }));
     },
+    autofocus: false,
+    editable: true,
+    parseOptions: {
+      preserveWhitespace: "full",
+    },
+    immediatelyRender: false, // Fixes SSR hydration issue
   });
 
   const handleChange = (e) =>
@@ -62,7 +87,6 @@ const SubmitArticle = () => {
     setUploading(true);
     try {
       const res = await axios.post("/api/upload", formData);
-      // Store only the relative path, not the full URL
       setForm((prev) => ({ ...prev, image: res.data.url }));
       toast.success("Image uploaded successfully.");
     } catch (err) {
@@ -74,9 +98,7 @@ const SubmitArticle = () => {
   };
 
   const handleSubmit = async (e) => {
-    e?.preventDefault();
-
-    // Check if we have all required fields
+    e.preventDefault();
     if (!form.title || !form.content || !form.name || !form.email) {
       toast.error("Please fill in all required fields");
       return;
@@ -84,20 +106,10 @@ const SubmitArticle = () => {
 
     toast.info("Submitting...");
     try {
-      // Make sure to include the image URL in the submission
-      const submission = {
-        ...form,
-        image: form.image, // Make sure this is included
-      };
-
-      console.log("Submitting article with data:", submission); // Debug log
-
-      await axios.post("/api/article-submissions", submission);
+      await axios.post("/api/article-submissions", form);
       toast.success("Article submitted successfully!");
-
-      // Reset form and editor
       setForm({ name: "", email: "", title: "", content: "", image: "" });
-      if (editor) editor.commands.clearContent();
+      editor?.commands.clearContent();
       setPreview(false);
     } catch (error) {
       console.error("Submission error:", error);
@@ -147,8 +159,8 @@ const SubmitArticle = () => {
                 alt="Cover"
                 className="mb-6 w-full max-h-[400px] object-cover rounded"
                 onError={(e) => {
-                  e.target.src = "/assets/profile_icon.png"; // Fallback image
-                  e.target.onerror = null; // Prevent infinite loop
+                  e.target.src = "/assets/profile_icon.png";
+                  e.target.onerror = null;
                 }}
               />
             )}
@@ -178,7 +190,6 @@ const SubmitArticle = () => {
         </>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Personal Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               name="name"
@@ -225,41 +236,67 @@ const SubmitArticle = () => {
             )}
           </div>
 
-          {/* Tiptap Toolbar */}
+          {/* Toolbar */}
           {editor && (
             <div className="flex flex-wrap gap-2 border rounded px-3 py-2 bg-gray-50 mb-2">
-              <button onClick={() => editor.chain().focus().toggleBold().run()}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().toggleBold().run();
+                }}
+              >
                 <FaBold />
               </button>
               <button
-                onClick={() => editor.chain().focus().toggleItalic().run()}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().toggleItalic().run();
+                }}
               >
                 <FaItalic />
               </button>
               <button
-                onClick={() => editor.chain().focus().toggleUnderline().run()}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().toggleUnderline().run();
+                }}
               >
                 <FaUnderline />
               </button>
               <button
-                onClick={() =>
-                  editor.chain().focus().toggleHeading({ level: 2 }).run()
-                }
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().toggleHeading({ level: 2 }).run();
+                }}
               >
                 <FaHeading />
               </button>
               <button
-                onClick={() => editor.chain().focus().toggleBulletList().run()}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().toggleBulletList().run();
+                }}
               >
                 <FaListUl />
               </button>
               <button
-                onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().toggleBlockquote().run();
+                }}
               >
                 <FaQuoteRight />
               </button>
               <button
-                onClick={() => {
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
                   const url = editor.getAttributes("link").href;
                   setLinkUrl(url || "");
                   setShowLinkInput(true);
@@ -283,12 +320,14 @@ const SubmitArticle = () => {
                 className="border px-3 py-1 rounded w-full"
               />
               <button
+                type="button"
                 onClick={applyLink}
                 className="bg-indigo-600 text-white px-3 py-1 rounded"
               >
                 Apply
               </button>
               <button
+                type="button"
                 onClick={() => setShowLinkInput(false)}
                 className="text-gray-500"
               >
@@ -302,7 +341,7 @@ const SubmitArticle = () => {
             <EditorContent editor={editor} />
           </div>
 
-          {/* Preview Button */}
+          {/* Buttons */}
           <button
             type="button"
             onClick={() => setPreview(true)}
@@ -311,7 +350,6 @@ const SubmitArticle = () => {
             Preview Article
           </button>
 
-          {/* Submit Button */}
           <button
             type="submit"
             className="bg-indigo-600 text-white px-6 py-2 rounded mt-4"

@@ -46,7 +46,7 @@ export function NavigationItems() {
           </Link>
         </NavigationMenuItem>
         <NavigationMenuItem>
-          <Link href="/##submit-article" passHref legacyBehavior>
+          <Link href="/submit-article" passHref legacyBehavior>
             <NavigationMenuLink className={navigationMenuTriggerStyle()}>
               Submit Article
             </NavigationMenuLink>

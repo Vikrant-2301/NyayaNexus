@@ -1,3 +1,4 @@
+//src\app\api\blog\route.js
 import { ConnectDB } from "@/components/lib/config/db";
 import BlogModel from "@/components/lib/models/BlogModel";
 import AuthorModel from "@/components/lib/models/AuthorModel"; // ✅ Register Author model

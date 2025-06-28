@@ -23,6 +23,7 @@ export default function AuthorsPage() {
     linkedin: "",
     website: "",
   });
+  const [preview, setPreview] = useState(null);
   const [editAuthor, setEditAuthor] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -32,7 +33,10 @@ export default function AuthorsPage() {
 
   const fetchAuthors = async () => {
     const res = await axios.get("/api/authors");
-    setAuthors(res.data);
+    const sorted = res.data.sort((a, b) =>
+      a.name.localeCompare(b.name, "en", { sensitivity: "base" })
+    );
+    setAuthors(sorted);
   };
 
   const resetForm = () => {
@@ -44,8 +48,19 @@ export default function AuthorsPage() {
       linkedin: "",
       website: "",
     });
+    setPreview(null);
     setEditAuthor(null);
     setModalOpen(false);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setForm({ ...form, image: file });
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result);
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -92,6 +107,7 @@ export default function AuthorsPage() {
       linkedin: author.socialLinks?.linkedin || "",
       website: author.socialLinks?.website || "",
     });
+    setPreview(author.image);
     setModalOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -100,83 +116,117 @@ export default function AuthorsPage() {
     <div className="p-6 space-y-10">
       <ToastContainer />
 
-      {/* Modal Form */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-center items-start pt-20">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-xl relative">
-            <h2 className="text-xl font-bold mb-4">
-              {editAuthor ? "Edit Author" : "Add Author"}
-            </h2>
-            <form onSubmit={handleSubmit} className="grid gap-4">
-              <input
-                type="text"
-                placeholder="Name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-                className="border p-2 rounded w-full"
-              />
-              <textarea
-                placeholder="Description"
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                className="border p-2 rounded w-full"
-                rows={4}
-                required
-              />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setForm({ ...form, image: e.target.files[0] })}
-              />
-              <input
-                type="url"
-                placeholder="Twitter"
-                value={form.twitter}
-                onChange={(e) => setForm({ ...form, twitter: e.target.value })}
-                className="border p-2 rounded w-full"
-              />
-              <input
-                type="url"
-                placeholder="LinkedIn"
-                value={form.linkedin}
-                onChange={(e) => setForm({ ...form, linkedin: e.target.value })}
-                className="border p-2 rounded w-full"
-              />
-              <input
-                type="url"
-                placeholder="Website"
-                value={form.website}
-                onChange={(e) => setForm({ ...form, website: e.target.value })}
-                className="border p-2 rounded w-full"
-              />
-              <div className="flex justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  {editAuthor ? "Save" : "Add"}
-                </button>
-              </div>
-            </form>
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl flex flex-col md:flex-row overflow-hidden">
+            {/* Left Side (Form) */}
+            <div className="w-full md:w-2/3 p-6 space-y-4">
+              <h2 className="text-2xl font-semibold text-center">
+                {editAuthor ? "Edit Author" : "Add Author"}
+              </h2>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                  className="border rounded-md p-2 w-full"
+                />
+
+                <textarea
+                  placeholder="Description"
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  rows={3}
+                  required
+                  className="border rounded-md p-2 w-full resize-none"
+                />
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full"
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    type="url"
+                    placeholder="Twitter"
+                    value={form.twitter}
+                    onChange={(e) =>
+                      setForm({ ...form, twitter: e.target.value })
+                    }
+                    className="border rounded-md p-2 w-full"
+                  />
+                  <input
+                    type="url"
+                    placeholder="LinkedIn"
+                    value={form.linkedin}
+                    onChange={(e) =>
+                      setForm({ ...form, linkedin: e.target.value })
+                    }
+                    className="border rounded-md p-2 w-full"
+                  />
+                  <input
+                    type="url"
+                    placeholder="Website"
+                    value={form.website}
+                    onChange={(e) =>
+                      setForm({ ...form, website: e.target.value })
+                    }
+                    className="border rounded-md p-2 w-full md:col-span-2"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="px-4 py-2 border rounded-md text-gray-600 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    {editAuthor ? "Save" : "Add"}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Right Side (Image Preview) */}
+            <div className="w-full md:w-1/3 bg-gray-50 flex items-center justify-center p-6 border-l">
+              {preview ? (
+                <div className="w-40 h-40 relative rounded-full overflow-hidden border shadow">
+                  <Image
+                    src={preview}
+                    alt="Preview"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <p className="text-gray-400 text-center text-sm">
+                  Image preview will appear here
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Header & Add Button */}
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Authors</h1>
         <button
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          className="bg-black text-white px-4 py-2 rounded-md hover:opacity-80"
           onClick={() => setModalOpen(true)}
         >
           + Add Author
@@ -189,53 +239,61 @@ export default function AuthorsPage() {
           authors.map((author) => (
             <div
               key={author._id}
-              className="bg-white border rounded-lg shadow p-4 flex flex-col items-center text-center"
+              className="bg-white border rounded-xl shadow-sm p-6 flex flex-col items-center text-center space-y-2"
             >
               <Image
                 src={author.image}
                 alt={author.name}
-                width={120}
-                height={120}
-                className="rounded-full object-cover mb-4"
+                width={100}
+                height={100}
+                className="rounded-full object-cover mb-2"
               />
-              <h3 className="text-xl font-semibold">{author.name}</h3>
-              <p className="text-gray-600">{author.description}</p>
-              <div className="flex gap-4 mt-3 text-xl">
+              <h3 className="text-lg font-medium">{author.name}</h3>
+              <p className="text-sm text-gray-500">{author.description}</p>
+
+              <div className="flex gap-4 mt-3 text-lg text-gray-600">
                 {author.socialLinks?.twitter && (
-                  <a
-                    href={author.socialLinks.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() =>
+                      window.open(author.socialLinks.twitter, "_blank")
+                    }
+                    className="hover:opacity-80"
                   >
-                    <FaTwitter className="text-blue-400" />
-                  </a>
+                    <FaTwitter />
+                  </button>
                 )}
                 {author.socialLinks?.linkedin && (
-                  <a
-                    href={author.socialLinks.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() =>
+                      window.open(author.socialLinks.linkedin, "_blank")
+                    }
+                    className="hover:opacity-80"
                   >
-                    <FaLinkedin className="text-blue-700" />
-                  </a>
+                    <FaLinkedin />
+                  </button>
                 )}
                 {author.socialLinks?.website && (
-                  <a
-                    href={author.socialLinks.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() =>
+                      window.open(author.socialLinks.website, "_blank")
+                    }
+                    className="hover:opacity-80"
                   >
-                    <FaGlobe className="text-gray-700" />
-                  </a>
+                    <FaGlobe />
+                  </button>
                 )}
-                <FaEdit
-                  className="text-yellow-600 cursor-pointer"
+                <button
                   onClick={() => handleEdit(author)}
-                />
-                <FaTrash
-                  className="text-red-600 cursor-pointer"
+                  className="hover:opacity-80"
+                >
+                  <FaEdit />
+                </button>
+                <button
                   onClick={() => handleDelete(author._id)}
-                />
+                  className="hover:opacity-80"
+                >
+                  <FaTrash />
+                </button>
               </div>
             </div>
           ))

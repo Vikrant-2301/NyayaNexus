@@ -60,7 +60,13 @@ const Page = () => {
   const [image, setImage] = useState(null);
   const [authors, setAuthors] = useState([]);
   const [selectedAuthor, setSelectedAuthor] = useState(null);
+  const [loadingAuthors, setLoadingAuthors] = useState(true);
   const [data, setData] = useState({ title: "", category: "Startup" });
+
+  const editor = useEditor({
+    extensions: [StarterKit, Link, TiptapImage],
+    content: "",
+  });
 
   useEffect(() => {
     const fetchAuthors = async () => {
@@ -72,16 +78,13 @@ const Page = () => {
         }
       } catch (error) {
         console.error("Error fetching authors:", error);
-        toast.error("Failed to fetch authors");
+        toast.error(error?.response?.data?.error || "Failed to fetch authors");
+      } finally {
+        setLoadingAuthors(false);
       }
     };
     fetchAuthors();
   }, []);
-
-  const editor = useEditor({
-    extensions: [StarterKit, Link, TiptapImage],
-    content: "",
-  });
 
   const onChangeHandler = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
@@ -90,22 +93,15 @@ const Page = () => {
   const onSubmitHandler = async (e) => {
     e.preventDefault();
 
-    if (!selectedAuthor) {
-      toast.error("Please select an author.");
-      return;
-    }
-
-    if (!image) {
-      toast.error("Please select a thumbnail image.");
-      return;
-    }
+    if (!selectedAuthor) return toast.error("Please select an author.");
+    if (!image) return toast.error("Please select a thumbnail image.");
 
     const formData = new FormData();
     formData.append("title", data.title);
     formData.append("description", editor.getHTML());
     formData.append("category", data.category);
     formData.append("author", selectedAuthor._id);
-    formData.append("authorImg", selectedAuthor.image); // Add author's image
+    formData.append("authorImg", selectedAuthor.image);
     formData.append("image", image);
 
     try {
@@ -126,7 +122,7 @@ const Page = () => {
       }
     } catch (err) {
       console.error("Error submitting blog:", err);
-      toast.error(err.response?.data?.msg || "Submission failed.");
+      toast.error(err?.response?.data?.msg || "Submission failed.");
     }
   };
 
@@ -228,22 +224,26 @@ const Page = () => {
             <label className="block text-sm font-semibold text-gray-700">
               Author
             </label>
-            <select
-              value={selectedAuthor?._id || ""}
-              onChange={(e) => {
-                const author = authors.find((a) => a._id === e.target.value);
-                setSelectedAuthor(author || null);
-              }}
-              className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-              required
-            >
-              <option value="">Select an author</option>
-              {authors.map((author) => (
-                <option key={author._id} value={author._id}>
-                  {author.name}
-                </option>
-              ))}
-            </select>
+            {loadingAuthors ? (
+              <p className="text-gray-500 text-sm">Loading authors...</p>
+            ) : (
+              <select
+                value={selectedAuthor?._id || ""}
+                onChange={(e) => {
+                  const author = authors.find((a) => a._id === e.target.value);
+                  setSelectedAuthor(author || null);
+                }}
+                className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                required
+              >
+                <option value="">Select an author</option>
+                {authors.map((author) => (
+                  <option key={author._id} value={author._id}>
+                    {author.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Submit Button */}
