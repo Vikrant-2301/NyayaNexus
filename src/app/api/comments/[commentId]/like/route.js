@@ -1,13 +1,11 @@
-// src/app/api/comments/[id]/like/route.js
+// src/app/api/comments/[commentId]/like/route.js
 
 import { NextResponse } from "next/server";
 import Blog from "@/components/lib/models/BlogModel";
 import { ConnectDB } from "@/components/lib/config/db";
 
-export async function PUT(request, contextPromise) {
-  const { params } = await contextPromise; // ✅ FIX: await context
-  const commentId = params?.id;
-
+export async function PUT(request, { params }) {
+  const { commentId } = params;
   const { blogId } = await request.json();
 
   if (!commentId || !blogId) {
