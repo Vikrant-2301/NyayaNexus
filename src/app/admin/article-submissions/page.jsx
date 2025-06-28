@@ -2,7 +2,6 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { Eye, Search, Download, CheckCircle, Trash2, X } from "lucide-react";
-import html2pdf from "html2pdf.js";
 import { saveAs } from "file-saver";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -22,7 +21,7 @@ export default function ArticleSubmissions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [confirmApproveId, setConfirmApproveId] = useState(null); // ✅ FIXED: missing useState
+  const [confirmApproveId, setConfirmApproveId] = useState(null);
   const contentRef = useRef();
 
   useEffect(() => {
@@ -129,12 +128,10 @@ export default function ArticleSubmissions() {
     <>
       <ToastContainer />
       <div className="px-4 sm:px-6 md:px-10 pt-6 pb-10 max-w-7xl mx-auto">
-        {/* Page Header (non-fixed) */}
         <h1 className="text-3xl font-bold text-gray-800 mb-4">
           Submitted Articles
         </h1>
 
-        {/* Search and Filter - now placed above the cards */}
         <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
           <div className="relative w-full md:max-w-md">
             <input
@@ -159,7 +156,6 @@ export default function ArticleSubmissions() {
           </select>
         </div>
 
-        {/* Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {paginatedSubmissions.map((article) => (
             <div
@@ -219,7 +215,6 @@ export default function ArticleSubmissions() {
           ))}
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center mt-10 gap-2 flex-wrap">
             {Array.from({ length: totalPages }, (_, i) => (
@@ -238,7 +233,6 @@ export default function ArticleSubmissions() {
           </div>
         )}
 
-        {/* View Modal */}
         {selectedArticle && (
           <div
             className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
@@ -321,7 +315,6 @@ export default function ArticleSubmissions() {
           </div>
         )}
 
-        {/* Confirm Approve Modal */}
         {confirmApproveId && (
           <div
             className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
@@ -357,7 +350,6 @@ export default function ArticleSubmissions() {
           </div>
         )}
 
-        {/* Confirm Delete Modal */}
         {confirmDeleteId && (
           <div
             className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
