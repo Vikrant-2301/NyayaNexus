@@ -1,9 +1,14 @@
-//src\app\api\authors\[id]\route.js
 import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import path from "path";
 import { ConnectDB } from "@/components/lib/config/db";
 import Author from "@/components/lib/models/AuthorModel";
+import { v2 as cloudinary } from "cloudinary";
+
+// ✅ Cloudinary config
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function PUT(request, { params }) {
   const { id } = params;
@@ -32,12 +37,16 @@ export async function PUT(request, { params }) {
     };
 
     if (image && image.size > 0) {
-      const bytes = await image.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const filename = `author-${Date.now()}${path.extname(image.name)}`;
-      const imagePath = path.join(process.cwd(), "public/images/authors", filename);
-      await writeFile(imagePath, buffer);
-      updateFields.image = `/images/authors/${filename}`;
+      const arrayBuffer = await image.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64Image = buffer.toString("base64");
+      const dataUri = `data:${image.type};base64,${base64Image}`;
+
+      const uploadResult = await cloudinary.uploader.upload(dataUri, {
+        folder: "nyaya/authors",
+      });
+
+      updateFields.image = uploadResult.secure_url;
     }
 
     const updated = await Author.findByIdAndUpdate(id, { $set: updateFields }, { new: true });

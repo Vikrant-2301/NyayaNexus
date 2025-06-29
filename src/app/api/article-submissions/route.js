@@ -1,10 +1,8 @@
-// app/api/article-submission/route.js
 import { ConnectDB } from "@/components/lib/config/db";
 import { NextResponse } from "next/server";
 import ArticleSubmission from "@/components/lib/models/ArticleSubmission";
 import nodemailer from "nodemailer";
 
-// GET – fetch all submissions
 export async function GET() {
   try {
     await ConnectDB();
@@ -12,38 +10,29 @@ export async function GET() {
     return NextResponse.json({ submissions });
   } catch (error) {
     console.error("GET error:", error);
-    return NextResponse.json(
-      { msg: "Failed to fetch submissions" },
-      { status: 500 }
-    );
+    return NextResponse.json({ msg: "Failed to fetch submissions" }, { status: 500 });
   }
 }
 
-// POST – submit a new article and send confirmation mail
 export async function POST(req) {
   try {
     await ConnectDB();
-    const body = await req.json();
-    const { name, email, title, content, image } = body;
+
+    const { name, email, title, content, image } = await req.json();
 
     if (!name || !email || !title || !content) {
-      return NextResponse.json(
-        { msg: "All fields are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ msg: "All fields are required" }, { status: 400 });
     }
 
-    // Save to DB
     const submission = await ArticleSubmission.create({
       name,
       email,
       title,
       content,
-      image,
+      image: image || "",
       approved: false,
     });
 
-    // Nodemailer setup
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -52,7 +41,7 @@ export async function POST(req) {
       },
     });
 
-    const mailOptions = {
+    await transporter.sendMail({
       from: `"NYAYA NEXUS" <${process.env.MY_EMAIL}>`,
       to: email,
       subject: "Your Article Has Been Received - Nyaya Nexus",
@@ -64,9 +53,7 @@ export async function POST(req) {
         <br/>
         <p>Best regards,<br/>Team Nyaya Nexus</p>
       `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
 
     return NextResponse.json(
       {

@@ -1,9 +1,6 @@
-//src\app\api\blog\[slug]\route.js
 import { ConnectDB } from "@/components/lib/config/db";
 import BlogModel from "@/components/lib/models/BlogModel";
 import { NextResponse } from "next/server";
-
-await ConnectDB();
 
 export async function GET(req, { params }) {
   const { slug } = params;
@@ -13,6 +10,9 @@ export async function GET(req, { params }) {
   }
 
   try {
+    await ConnectDB();
+
+    // ✅ Populate the author field
     const blog = await BlogModel.findOne({ slug }).populate("author");
 
     if (!blog) {
@@ -21,6 +21,10 @@ export async function GET(req, { params }) {
 
     return NextResponse.json(blog);
   } catch (error) {
-    return NextResponse.json({ msg: "Failed to fetch blog", error: error.message }, { status: 500 });
+    console.error("Error fetching blog by slug:", error.message);
+    return NextResponse.json(
+      { msg: "Failed to fetch blog", error: error.message },
+      { status: 500 }
+    );
   }
 }

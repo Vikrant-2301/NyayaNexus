@@ -1,15 +1,14 @@
-// src/app/api/article-submissions/[id]/approve/route.js
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { ConnectDB } from "@/components/lib/config/db";
 import ArticleSubmission from "@/components/lib/models/ArticleSubmission";
 
-await ConnectDB();
-
 export async function PUT(req, context) {
-  const { id } = context.params;
+  const { id } = await context.params; // ✅ await added
 
   try {
+    await ConnectDB();
+
     const article = await ArticleSubmission.findById(id);
     if (!article) {
       return NextResponse.json({ msg: "Article not found" }, { status: 404 });
@@ -40,7 +39,7 @@ export async function PUT(req, context) {
 
     return NextResponse.json({ msg: "Article approved and email sent." });
   } catch (error) {
-    console.error(error);
+    console.error("Approval error:", error);
     return NextResponse.json(
       { msg: "Failed to approve article or send email." },
       { status: 500 }
